@@ -9,7 +9,7 @@ import (
 	"syscall"
 )
 
-// Main Settings
+// Main Settings. Yes this token is already invalid idiot.
 var (
 	Token string = "NTc1NjExMTA2ODcwMDM0NDQy.XNKdng.8XBWbmguV3F5Ff6ngpKbcAcurDw"
 	Prefix string = "]"
