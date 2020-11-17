@@ -1,18 +1,29 @@
 package main
+//Welcome to the horrible mess of my second go program.
+// <shitpost>
+// Rawr xD this verriw nice firwst progewm OwO
+// Bye XD
+// </shitpost>
 
 import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
+	"log"
 	"os"
 	"os/signal"
 	"strings"
 	"syscall"
 )
 
-// Main Settings. Yes this token is already invalid idiot.
+// Main Settings.
+//TODO: Settings.json and delete tempShit so we can track more channels then one.
 var (
 	Token string = "NTc1NjExMTA2ODcwMDM0NDQy.XNKdng.8XBWbmguV3F5Ff6ngpKbcAcurDw"
 	Prefix string = "]"
+	tempCate string
+	tempText string
+	tempVoice string
+	tempSettings string
 )
 
 type ChannelJson struct {
@@ -24,6 +35,7 @@ type ChannelJson struct {
 }
 
 func main() {
+	//Todo: Rename it
 	fmt.Println("MarfBOT:Go Kernel Initialized." +
 					 "\n------------------------------")
 
@@ -36,9 +48,9 @@ func main() {
 
 	//Register Handlers
 	dg.AddHandler(MessageCreate)
+	dg.AddHandler(MessageReactions)
 
-
-	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildMessages)
+	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsAllWithoutPrivileged)
 
 	err = dg.Open()
 	if err != nil {
@@ -52,6 +64,15 @@ func main() {
 	<-sc
 
 	dg.Close()
+}
+
+func MessageReactions(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
+	//fmt.Println(r.MessageReaction.Emoji.Name == "❌")
+	if r.MessageReaction.Emoji.Name == "❌" && r.MessageReaction.UserID == "218310787289186304" && r.MessageID == tempSettings {
+		s.ChannelDelete(tempVoice)
+		s.ChannelDelete(tempText)
+		s.ChannelDelete(tempCate)
+	}
 }
 
 func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -92,17 +113,52 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		tempchan, err := s.ChannelMessageSend(m.ChannelID, "Creating temporay channels for you...")
 
 		channelCategory, err 	:= s.GuildChannelCreate(m.GuildID, strings.Trim(m.Content, Prefix + "cc "), discordgo.ChannelTypeGuildCategory)
-		channelText, err 		:= s.GuildChannelCreate(m.GuildID, strings.Trim(m.Content, Prefix + "cc "), discordgo.ChannelTypeGuildText)
-		channelVoice, err 		:= s.GuildChannelCreate(m.GuildID, strings.Trim(m.Content, Prefix + "cc "), discordgo.ChannelTypeGuildVoice)
+		//channelText, err 		:= s.GuildChannelCreate(m.GuildID, strings.Trim(m.Content, Prefix + "cc "), discordgo.ChannelTypeGuildText)
+		//channelVoice, err 	:= s.GuildChannelCreate(m.GuildID, strings.Trim(m.Content, Prefix + "cc "), discordgo.ChannelTypeGuildVoice)
 
-		_, err = s.ChannelEditComplex(channelText.ID, &discordgo.ChannelEdit{ParentID: channelCategory.ID, Topic: "Created by: " + m.Author.Username + ". This is a temporary channel."})
-		_, err = s.ChannelEditComplex(channelVoice.ID, &discordgo.ChannelEdit{ParentID: channelCategory.ID})
+		channelText, err := s.GuildChannelCreateComplex(m.GuildID, discordgo.GuildChannelCreateData{
+			Name:                 strings.Trim(m.Content, Prefix + "cc "),
+			Type:                 discordgo.ChannelTypeGuildText,
+			Topic:                "Created by: " + m.Author.Username + ". This is a temporary channel.",
+			Position:             0,
+			ParentID:             channelCategory.ID,
+			NSFW:                 false,
+		})
 
-		_, err = s.ChannelMessageSend(channelText.ID, m.Author.Mention() + " This is your newly created channel. " +
-			"Join Witin 30 seconds, or this channel will be deleted.")
+		// Create the text channel
+		channelVoice, err := s.GuildChannelCreateComplex(m.GuildID, discordgo.GuildChannelCreateData{
+			Name: strings.Trim(m.Content, Prefix + "cc "),
+			Type: discordgo.ChannelTypeGuildVoice,
+			ParentID: channelCategory.ID,
+		})
 
 		if err != nil {
-			s.ChannelMessageSend(m.ChannelID, "Sorry, I was unable to create the channel. <@218310787289186304> Logged error to console.")
+			log.Printf("Cannot create voice channel: %v\n", err)
+		}
+
+		tempCate = channelCategory.ID
+		tempText = channelText.ID
+		tempVoice = channelVoice.ID
+
+		//_, err = s.ChannelEditComplex(channelText.ID, &discordgo.ChannelEdit{ParentID: channelCategory.ID, Topic: "Created by: " + m.Author.Username + ". This is a temporary channel."})
+		//_, err = s.ChannelEditComplex(channelVoice.ID, &discordgo.ChannelEdit{ParentID: channelCategory.ID})
+
+		channelSettings, err := s.ChannelMessageSend(channelText.ID, "```*** Channel Settings ***```\nThis is your newly created channel.\n" +
+			"The channel owner is: " + m.Author.Mention() + "\n" +
+			"Only that person* can perform options by reacting to the emoji's below.\n\n" +
+			"❌ = Delete the channel\n" +
+			"🔒 = Disable this Chat channel.\n\n" +
+			"For more commands enter ]channel help\n\n\n" +
+			"⚠ Note: Staff of this server is also able to change every setting.")
+		tempSettings = channelSettings.ID;
+		s.ChannelMessagePin(channelText.ID, channelSettings.ID)
+
+		s.MessageReactionAdd(channelText.ID, channelSettings.ID, "❌")
+		s.MessageReactionAdd(channelText.ID, channelSettings.ID, "🔒")
+
+
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, "⚠ Sorry, I was unable to create the channel. <@218310787289186304> Logged error to console.")
 			fmt.Println("Error: ", err)
 		} else {
 			s.ChannelMessageDelete(m.ChannelID, tempchan.ID)
