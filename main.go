@@ -8,7 +8,6 @@ package main
 import (
 	"fmt"
 	"github.com/bwmarrin/discordgo"
-	"log"
 	"os"
 	"os/signal"
 	"strings"
@@ -20,10 +19,10 @@ import (
 var (
 	Token string = "NTc1NjExMTA2ODcwMDM0NDQy.XNKdng.8XBWbmguV3F5Ff6ngpKbcAcurDw"
 	Prefix string = "]"
-	tempCate string
-	tempText string
-	tempVoice string
-	tempSettings string
+	tempCate string //Deprecated
+	tempText string //Deprecated
+	tempVoice string //Deprecated
+	tempSettings string //Deprecated
 )
 
 type ChannelJson struct {
@@ -35,9 +34,16 @@ type ChannelJson struct {
 }
 
 func main() {
-	//Todo: Rename it
-	fmt.Println("MarfBOT:Go Kernel Initialized." +
-					 "\n------------------------------")
+	// Logo
+	//goland:noinspection GoPrintFunctions
+	fmt.Println("  _______                    _____ _                   \n" +
+		" |__   __|                  / ____| |                 \n" +
+		"    | | ___ _ __ ___  _ __ | |    | |__   __ _ _ __   \n" +
+		"    | |/ _ \\ '_ ` _ \\| '_ \\| |    | '_ \\ / _` | '_ \\  \n" +
+		"    | |  __/ | | | | | |_) | |____| | | | (_| | | | | \n" +
+		"    |_|\\___|_| |_| |_| .__/ \\_____|_| |_|\\__,_|_| |_| \n" +
+		"                     | |                              \n" +
+		"                     |_|                                \n")
 
 	//New Discord session
 	dg, err := discordgo.New("Bot " + Token)
@@ -58,7 +64,8 @@ func main() {
 		return
 	}
 
-	fmt.Println("MarfBOT is running.")
+	fmt.Println("TempChan is running. Logged in as: " + dg.State.User.Username)
+
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-sc
@@ -73,6 +80,11 @@ func MessageReactions(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 		s.ChannelDelete(tempText)
 		s.ChannelDelete(tempCate)
 	}
+
+	if r.MessageReaction.Emoji.Name == "🔞" && r.MessageReaction.UserID != s.State.User.ID && r.MessageID == tempSettings {
+		s.ChannelEditComplex(tempText, &discordgo.ChannelEdit{NSFW: true})
+		s.MessageReactionRemove(tempText, tempSettings, "🔞", r.UserID);
+	}
 }
 
 func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -82,39 +94,40 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
-	// If the message is "ping" reply with "Pong!"
-	if m.Content == Prefix + "ping" {
-		s.ChannelMessageSend(m.ChannelID, "Pong!")
+
+	if strings.Contains(m.Content, "iOS")  {
+		_, err := s.ChannelMessageSend(m.ChannelID, "> " + m.Content + "\n" + m.Author.Mention() + " Its `Ios` Not `iOS` :)")
+		if err != nil {
+			fmt.Println("Error: ", err)
+		}
 	}
 
-	// If the message is "pong" reply with "Ping!"
-	if m.Content == Prefix + "pong" {
-		s.ChannelMessageSend(m.ChannelID, "Ping!")
-	}
-
+	// Show a simple help list.
 	if m.Content == Prefix + "help" {
-		s.ChannelMessageSend(m.ChannelID, "To create Channels: ]cc <name>")
-		s.ChannelMessageSend(m.ChannelID, "Setting a Limit ]climit <number of people>")
+		s.ChannelMessageSend(m.ChannelID, 	"To create Channels: ]cc <name>\n" +
+													"Setting a Limit ]climit <number of people>")
+	}
+
+	if m.Content == Prefix + "exit" && m.Author.ID == "218310787289186304" {
+		s.ChannelMessageSend(m.ChannelID, "Shutting down.")
+		fmt.Println("Got exit call from discord command.")
+		s.Close()
+		os.Exit(0)
+	} else if m.Content == Prefix + "exit" && m.Author.ID != "218310787289186304" {
+		s.ChannelMessageSend(m.ChannelID, "Watch this: <https://www.youtube.com/watch?v=dQw4w9WgXcQ>")
 	}
 
 	if m.Content == Prefix + "cc" {
 		s.ChannelMessageSend(m.ChannelID, "Error missing channel name!")
 	}
 
-	if m.Content == Prefix + "exit" && m.Author.ID == "218310787289186304" {
-		s.ChannelMessageSend(m.ChannelID, "Shutting down.")
-		os.Exit(0)
-	} else if m.Content == Prefix + "exit" && m.Author.ID != "218310787289186304" {
-		s.ChannelMessageSend(m.ChannelID, "Really?")
-	}
-
+	//todo: make a command framework?
 	if strings.HasPrefix(m.Content, Prefix + "cc ") {
 
 		tempchan, err := s.ChannelMessageSend(m.ChannelID, "Creating temporay channels for you...")
 
+		//Create the first category first.
 		channelCategory, err 	:= s.GuildChannelCreate(m.GuildID, strings.Trim(m.Content, Prefix + "cc "), discordgo.ChannelTypeGuildCategory)
-		//channelText, err 		:= s.GuildChannelCreate(m.GuildID, strings.Trim(m.Content, Prefix + "cc "), discordgo.ChannelTypeGuildText)
-		//channelVoice, err 	:= s.GuildChannelCreate(m.GuildID, strings.Trim(m.Content, Prefix + "cc "), discordgo.ChannelTypeGuildVoice)
 
 		channelText, err := s.GuildChannelCreateComplex(m.GuildID, discordgo.GuildChannelCreateData{
 			Name:                 strings.Trim(m.Content, Prefix + "cc "),
@@ -124,6 +137,10 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			ParentID:             channelCategory.ID,
 			NSFW:                 false,
 		})
+		if err != nil {
+			s.ChannelMessageSend(m.ChannelID, "⚠ Sorry, I was unable to create the text channel. <@218310787289186304> Logged error to console.")
+			fmt.Println("Error: ", err)
+		}
 
 		// Create the text channel
 		channelVoice, err := s.GuildChannelCreateComplex(m.GuildID, discordgo.GuildChannelCreateData{
@@ -131,23 +148,22 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 			Type: discordgo.ChannelTypeGuildVoice,
 			ParentID: channelCategory.ID,
 		})
-
 		if err != nil {
-			log.Printf("Cannot create voice channel: %v\n", err)
+			s.ChannelMessageSend(m.ChannelID, "⚠ Sorry, I was unable to create the voice channel. <@218310787289186304> Logged error to console.")
+			fmt.Println("Error: ", err)
 		}
 
+		//todo: make a manager something like that to keep track of channels.
 		tempCate = channelCategory.ID
 		tempText = channelText.ID
 		tempVoice = channelVoice.ID
-
-		//_, err = s.ChannelEditComplex(channelText.ID, &discordgo.ChannelEdit{ParentID: channelCategory.ID, Topic: "Created by: " + m.Author.Username + ". This is a temporary channel."})
-		//_, err = s.ChannelEditComplex(channelVoice.ID, &discordgo.ChannelEdit{ParentID: channelCategory.ID})
 
 		channelSettings, err := s.ChannelMessageSend(channelText.ID, "```*** Channel Settings ***```\nThis is your newly created channel.\n" +
 			"The channel owner is: " + m.Author.Mention() + "\n" +
 			"Only that person* can perform options by reacting to the emoji's below.\n\n" +
 			"❌ = Delete the channel\n" +
-			"🔒 = Disable this Chat channel.\n\n" +
+			"🔒 = Disable this Chat channel.\n" +
+			"🔞 = Set Chat as NSFW\n\n"+
 			"For more commands enter ]channel help\n\n\n" +
 			"⚠ Note: Staff of this server is also able to change every setting.")
 		tempSettings = channelSettings.ID;
@@ -155,6 +171,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 
 		s.MessageReactionAdd(channelText.ID, channelSettings.ID, "❌")
 		s.MessageReactionAdd(channelText.ID, channelSettings.ID, "🔒")
+		s.MessageReactionAdd(channelText.ID, channelSettings.ID, "🔞")
 
 
 		if err != nil {
@@ -163,6 +180,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		} else {
 			s.ChannelMessageDelete(m.ChannelID, tempchan.ID)
 			s.ChannelMessageSend(m.ChannelID, "Channel created. please join the channel within 30 seconds, or it will be deleted")
+			fmt.Println("Created a new temporary channel to watch on... Guild ID: " + m.GuildID + " Category ID: " + tempCate + " TextChannel ID: " + tempText + " VoiceChannel ID: " + tempVoice)
 		}
 	}
 }
