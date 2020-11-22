@@ -75,7 +75,9 @@ func main() {
 	//TODO: implement Unix socket connections
 	fmt.Println("INIT: Database in TCP mode")
 
-	db, err := sql.Open("mysql", Config.database_user + ":" + Config.database_password + "@(" + Config.database_host + ":" + Config.database_port + " )/" + Config.database_table)
+	//TODO:Need to use the json file because for some fucking reason it doesnt want to work and error out.
+	//db, err := sql.Open("mysql", Config.database_user + ":" + Config.database_password + "@tcp(" + Config.database_host + ":" + Config.database_port + ")/" + Config.database_table)
+	db, err := sql.Open("mysql", "root:root@tcp(127.0.0.1:3306)/TempChan")
 	if err != nil {
 		panic(err)
 	} else {
@@ -135,9 +137,7 @@ func MessageReactions(s *discordgo.Session, r *discordgo.MessageReactionAdd) {
 	}
 
 	var channel = Channel{}
-	fmt.Println(channel)
-	_ = DB.QueryRow("SELECT * from channels WHERE settingmessage_id = "+r.MessageID).Scan(&channel.id, &channel.name, &channel.owner_id, &channel.category_id, &channel.voicechannel_id, &channel.textchannel_id, &channel.settingmessage_id, &channel.options)
-	fmt.Println(channel.settingmessage_id)
+	_ = DB.QueryRow("SELECT * from channels WHERE settingmessage_id = " + r.MessageID).Scan(&channel.id, &channel.name, &channel.owner_id, &channel.category_id, &channel.voicechannel_id, &channel.textchannel_id, &channel.settingmessage_id, &channel.options)
 
 	if r.MessageReaction.Emoji.Name == "❌" && r.MessageReaction.UserID == "218310787289186304" && r.MessageID == channel.settingmessage_id {
 		s.ChannelDelete(channel.voicechannel_id)
@@ -260,7 +260,7 @@ func MessageCreate(s *discordgo.Session, m *discordgo.MessageCreate) {
 		//Saving TO DB
 		fmt.Println("Saving to DB...")
 		stmt, err := DB.Prepare("INSERT INTO `channels` (`name`, `owner_id`, `category_id`, `voicechannel_id`, `textchannel_id`, `settingmessage_id`, `options`)  VALUES (?, ?, ?, ?, ?, ?, ?)")
-		stmt.Exec(strings.Trim(m.Content, Config.Prefix + "cc "), m.Author.ID, channelCategory.ID, channelVoice.ID, channelText.ID, channelSettings.ID, nil)
+		_, err = stmt.Exec(strings.Trim(m.Content, Config.Prefix + "cc "), m.Author.ID, channelCategory.ID, channelVoice.ID, channelText.ID, channelSettings.ID, nil)
 
 		if err != nil {
 			s.ChannelMessageSend(m.ChannelID, "⚠ Sorry, I was unable to create the channel. <@218310787289186304> Logged error to console.")
