@@ -1,7 +1,0 @@
-{
-  "bot_token": "Bot your-bot-token",
-  "owner_id": "your user id",
-  "use_sharding": false,
-  "shard_id": 0,
-  "shard_count": 1
-}

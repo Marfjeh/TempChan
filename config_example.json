@@ -1,0 +1,12 @@
+{
+  "Token": "",
+  "Prefix": "]",
+  "Owner_id": "",
+  "database_host": "17.0.0.1",
+  "database_port": "3306",
+  "database_connect": "tcp",
+  "database_socket": "NOT IMPLEMENTED YET",
+  "database_user": "",
+  "database_password": "",
+  "database_table": ""
+}
