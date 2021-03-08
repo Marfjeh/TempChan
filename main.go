@@ -1,9 +1,4 @@
 package main
-//Welcome to the horrible mess of my second go program.
-// <shitpost>
-// Rawr xD this verriw nice firwst progewm OwO
-// Bye XD
-// </shitpost>
 
 import (
 	"database/sql"
@@ -70,6 +65,7 @@ func main() {
 		panic(err)
 	}
 	fmt.Println("Config read successfully.")
+
 
 	//Init Database
 	//TODO: implement Unix socket connections
